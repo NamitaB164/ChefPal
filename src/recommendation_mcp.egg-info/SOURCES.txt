@@ -1,0 +1,7 @@
+pyproject.toml
+src/recommendation_mcp/__init__.py
+src/recommendation_mcp.egg-info/PKG-INFO
+src/recommendation_mcp.egg-info/SOURCES.txt
+src/recommendation_mcp.egg-info/dependency_links.txt
+src/recommendation_mcp.egg-info/top_level.txt
+tests/test_project.py
