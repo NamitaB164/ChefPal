@@ -1,43 +1,39 @@
 from recommendation_mcp.storage.database import (
-    filter_by_calories,
+    filter_recipes,
     get_connection,
     get_recipe,
 )
 
 
-def test_filter_by_calories():
+def test_filter_recipes_combined():
     connection = get_connection()
 
-    recipe_ids = [63986, 66019, 216970]
+    recipe_ids = [66, 142, 62]
 
-    results = filter_by_calories(
+    results = filter_recipes(
         connection,
         recipe_ids,
-        max_calories=500,
+        max_minutes=30,
+        required_tags=["vegetarian"],
     )
 
     for recipe_id in results:
         recipe = get_recipe(connection, recipe_id)
-        assert recipe["calories_kcal"] <= 500
+
+        assert recipe["minutes"] <= 30
+        assert "vegetarian" in recipe["tags"].lower()
 
     connection.close()
-def test_filter_by_calories_preserves_order():
+def test_filter_recipes_without_filters():
     connection = get_connection()
 
-    recipe_ids = [216970, 63986, 66019]
+    recipe_ids = [66, 142, 62]
 
-    results = filter_by_calories(
+    results = filter_recipes(
         connection,
         recipe_ids,
-        max_calories=500,
     )
-
-    expected = [
-        recipe_id
-        for recipe_id in recipe_ids
-        if get_recipe(connection, recipe_id)["calories_kcal"] <= 500
-    ]
 
     connection.close()
 
-    assert results == expected
+    assert results == recipe_ids

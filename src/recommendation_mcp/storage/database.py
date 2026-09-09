@@ -2,7 +2,6 @@ import json
 import sqlite3
 from pathlib import Path
 
-
 DATABASE_PATH = Path("data/processed/recipes.db")
 
 
@@ -100,7 +99,7 @@ def get_recipe(
         "SELECT * FROM recipes WHERE recipe_id = ?",
         (recipe_id,),
     ).fetchone()
-def filter_by_calories(
+def _filter_by_calories(
     connection: sqlite3.Connection,
     recipe_ids: list[int],
     max_calories: float,
@@ -129,3 +128,113 @@ def filter_by_calories(
         for recipe_id in recipe_ids
         if recipe_id in valid_ids
     ]
+
+def _filter_by_minutes(
+    connection: sqlite3.Connection,
+    recipe_ids: list[int],
+    max_minutes: int,
+) -> list[int]:
+    if not recipe_ids:
+        return []
+
+    placeholders = ",".join("?" for _ in recipe_ids)
+
+    query = f"""
+        SELECT recipe_id
+        FROM recipes
+        WHERE recipe_id IN ({placeholders})
+        AND minutes <= ?
+    """
+
+    parameters = [*recipe_ids, max_minutes]
+
+    rows = connection.execute(query, parameters).fetchall()
+
+    valid_ids = {row["recipe_id"] for row in rows}
+
+    # Preserve the original hybrid/RRF ranking order.
+    return [
+        recipe_id
+        for recipe_id in recipe_ids
+        if recipe_id in valid_ids
+    ]
+
+def _filter_by_tags(
+    connection: sqlite3.Connection,
+    recipe_ids: list[int],
+    required_tags: list[str],
+) -> list[int]:
+    if not recipe_ids:
+        return []
+
+    if not required_tags:
+        return recipe_ids
+
+    placeholders = ",".join("?" for _ in recipe_ids)
+
+    query = f"""
+        SELECT recipe_id, tags
+        FROM recipes
+        WHERE recipe_id IN ({placeholders})
+    """
+
+    rows = connection.execute(
+        query,
+        recipe_ids,
+    ).fetchall()
+
+    valid_ids = set()
+
+    required = {
+        tag.lower()
+        for tag in required_tags
+    }
+
+    for row in rows:
+        tags = {
+            tag.lower()
+            for tag in json.loads(row["tags"])
+        }
+
+        if required.issubset(tags):
+            valid_ids.add(row["recipe_id"])
+
+    return [
+        recipe_id
+        for recipe_id in recipe_ids
+        if recipe_id in valid_ids
+    ]
+def filter_recipes(
+    connection: sqlite3.Connection,
+    recipe_ids: list[int],
+    max_calories: float | None = None,
+    max_minutes: int | None = None,
+    required_tags: list[str] | None = None,
+) -> list[int]:
+    if not recipe_ids:
+        return []
+
+    results = recipe_ids
+
+    if max_calories is not None:
+        results = _filter_by_calories(
+            connection,
+            results,
+            max_calories,
+        )
+
+    if max_minutes is not None:
+        results = _filter_by_minutes(
+            connection,
+            results,
+            max_minutes,
+        )
+
+    if required_tags is not None:
+        results = _filter_by_tags(
+            connection,
+            results,
+            required_tags,
+        )
+
+    return results

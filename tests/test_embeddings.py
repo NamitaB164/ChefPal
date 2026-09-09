@@ -2,6 +2,7 @@ from sentence_transformers import SentenceTransformer
 
 from recommendation_mcp.retrieval.embeddings import RecipeEmbedder
 
+
 def test_create_embedding():
     model = SentenceTransformer("all-MiniLM-L6-v2")
 

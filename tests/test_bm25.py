@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+
 from recommendation_mcp.retrieval.bm25_store import BM25Store
 
 

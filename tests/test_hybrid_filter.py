@@ -1,6 +1,6 @@
 from recommendation_mcp.retrieval.hybrid import HybridRetriever
 from recommendation_mcp.storage.database import (
-    filter_by_calories,
+    filter_recipes,
     get_connection,
 )
 
@@ -17,7 +17,7 @@ def test_hybrid_results_can_be_filtered():
 
     connection = get_connection()
 
-    filtered_ids = filter_by_calories(
+    filtered_ids = filter_recipes(
         connection,
         recipe_ids,
         max_calories=500,
