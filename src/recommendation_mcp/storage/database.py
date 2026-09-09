@@ -92,3 +92,40 @@ def create_tables(connection: sqlite3.Connection) -> None:
     )
 
     connection.commit()
+def get_recipe(
+    connection: sqlite3.Connection,
+    recipe_id: int,
+) -> sqlite3.Row | None:
+    return connection.execute(
+        "SELECT * FROM recipes WHERE recipe_id = ?",
+        (recipe_id,),
+    ).fetchone()
+def filter_by_calories(
+    connection: sqlite3.Connection,
+    recipe_ids: list[int],
+    max_calories: float,
+) -> list[int]:
+    if not recipe_ids:
+        return []
+
+    placeholders = ",".join("?" for _ in recipe_ids)
+
+    query = f"""
+        SELECT recipe_id
+        FROM recipes
+        WHERE recipe_id IN ({placeholders})
+        AND calories_kcal <= ?
+    """
+
+    parameters = [*recipe_ids, max_calories]
+
+    rows = connection.execute(query, parameters).fetchall()
+
+    valid_ids = {row["recipe_id"] for row in rows}
+
+    # Preserve the original hybrid/RRF ranking order.
+    return [
+        recipe_id
+        for recipe_id in recipe_ids
+        if recipe_id in valid_ids
+    ]
