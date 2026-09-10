@@ -1,3 +1,4 @@
+
 from pathlib import Path
 
 from recommendation_mcp.retrieval.bm25_store import BM25Store
@@ -14,20 +15,40 @@ class HybridRetriever:
         self.bm25 = BM25Store.load(BM25_INDEX)
         self.client = get_client()
 
+    def semantic_search(
+        self,
+        query: str,
+        limit: int = 5,
+    ) -> list[tuple[int, float]]:
+        query_embedding = self.embedder.model.encode(query).tolist()
+
+        return search(
+            self.client,
+            query_embedding,
+            limit=limit,
+        )
+
+    def keyword_search(
+        self,
+        query: str,
+        limit: int = 5,
+    ) -> list[tuple[int, float]]:
+        return self.bm25.search(
+            query,
+            limit=limit,
+        )
+
     def search(
         self,
         query: str,
         limit: int = 5,
     ) -> list[tuple[int, float]]:
-        dense_embedding = self.embedder.model.encode(query).tolist()
-
-        dense_results = search(
-            self.client,
-            dense_embedding,
+        dense_results = self.semantic_search(
+            query,
             limit=limit,
         )
 
-        sparse_results = self.bm25.search(
+        sparse_results = self.keyword_search(
             query,
             limit=limit,
         )
@@ -43,10 +64,11 @@ class HybridRetriever:
         ]
 
         results = reciprocal_rank_fusion(
-    [dense_ranking, sparse_ranking]
-)
+            [dense_ranking, sparse_ranking]
+        )
 
         return results[:limit]
 
     def close(self) -> None:
         self.client.close()
+

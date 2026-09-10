@@ -3,7 +3,6 @@ from pathlib import Path
 
 from recommendation_mcp.models.recipe import Recipe
 
-
 INPUT_FILE = Path("data/raw/recipes.jsonl")
 OUTPUT_FILE = Path("data/processed/recipes.jsonl")
 IMAGE_DIR = Path("data/raw/images")

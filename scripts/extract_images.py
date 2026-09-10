@@ -2,7 +2,6 @@ from pathlib import Path
 
 from datasets import load_dataset
 
-
 OUTPUT_DIR = Path("data/raw/images")
 
 

@@ -1,6 +1,5 @@
 from sentence_transformers import SentenceTransformer
 
-
 MODEL_NAME = "all-MiniLM-L6-v2"
 
 
@@ -21,7 +20,11 @@ class RecipeEmbedder:
         embedding = self.model.encode(text)
 
         return embedding.tolist()
-    def embed_batch(self, recipes: list[dict], batch_size: int = 32,) -> list[list[float]]:
+    def embed_batch(
+        self,
+        recipes: list[dict],
+        batch_size: int = 32,
+        ) -> list[list[float]]:
         texts = [self.build_text(recipe) for recipe in recipes]
 
         embeddings = self.model.encode(

@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct
+from qdrant_client.models import Distance, PointStruct, VectorParams
 
 QDRANT_PATH = Path("data/qdrant")
 COLLECTION_NAME = "recipes"

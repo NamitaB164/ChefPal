@@ -6,7 +6,6 @@ from recommendation_mcp.storage.database import (
     insert_recipe,
 )
 
-
 INPUT_FILE = "data/processed/recipes.jsonl"
 
 
