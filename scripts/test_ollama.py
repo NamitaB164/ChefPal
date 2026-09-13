@@ -2,7 +2,6 @@ import ollama
 
 from recommendation_mcp.agents.planner import MealRequest
 
-
 SYSTEM_PROMPT = """
 You are a meal recommendation query planner.
 
