@@ -2,7 +2,6 @@ import json
 
 from mcp.server import MCPServer
 
-from recommendation_mcp.retrieval.hybrid import HybridRetriever
 from recommendation_mcp.storage.database import (
     filter_recipes,
     get_connection,
@@ -10,7 +9,19 @@ from recommendation_mcp.storage.database import (
 )
 
 mcp = MCPServer("Recommendation MCP Server")
-hybrid_retriever = HybridRetriever()
+
+_hybrid_retriever = None
+
+
+def get_hybrid_retriever():
+    global _hybrid_retriever
+
+    if _hybrid_retriever is None:
+        from recommendation_mcp.retrieval.hybrid import HybridRetriever
+
+        _hybrid_retriever = HybridRetriever()
+
+    return _hybrid_retriever
 
 @mcp.tool()
 def health_check() -> str:
@@ -64,7 +75,7 @@ def semantic_search(
     limit: int = 5,
 ) -> list[dict]:
     """Find recipes using semantic similarity search."""
-    results = hybrid_retriever.semantic_search(
+    results = get_hybrid_retriever().semantic_search(
         query,
         limit=limit,
     )
@@ -83,7 +94,7 @@ def keyword_search(
     limit: int = 5,
 ) -> list[dict]:
     """Find recipes using keyword-based BM25 search."""
-    results = hybrid_retriever.keyword_search(
+    results = get_hybrid_retriever().keyword_search(
         query,
         limit=limit,
     )
@@ -101,7 +112,7 @@ def hybrid_search(
     limit: int = 5,
 ) -> list[dict]:
     """Find recipes using hybrid semantic and keyword retrieval."""
-    results = hybrid_retriever.search(
+    results = get_hybrid_retriever().search(
         query,
         limit=limit,
     )

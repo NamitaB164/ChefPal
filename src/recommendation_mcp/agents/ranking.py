@@ -1,7 +1,5 @@
-import json
 
-import ollama
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from recommendation_mcp.agents.planner import MealRequest
 from recommendation_mcp.agents.retrieval import RetrievedRecipe
@@ -14,111 +12,118 @@ class RankedRecipe(BaseModel):
 
 
 class RankingResult(BaseModel):
-    recommendations: list[RankedRecipe] = Field(default_factory=list)
+    recommendations: list[RankedRecipe]
 
-SYSTEM_PROMPT = """
-You are a meal recommendation ranking agent.
 
-Your task is to rank the provided recipe candidates according to the
-user's meal request.
-
-Rules:
-- Rank only the provided candidates.
-- Do not invent recipes or recipe IDs.
-- Do not modify or invent recipe data.
-
-Hard constraints:
-- All hard constraints such as maximum calories and maximum preparation
-  time have already been enforced by the retrieval system.
-- Assume every provided candidate satisfies those hard constraints.
-- Never claim that a provided candidate violates max_calories or
-  max_minutes.
-- Do not independently re-rank, reinterpret, or reject candidates based
-  on hard constraints.
-
-Ranking:
-- Prioritize the user's explicitly stated dietary preferences and meal
-  requirements.
-- Use recipe relevance, ingredients, tags, nutrition, rating, preparation
-  time, and other available recipe information when appropriate.
-- Do not treat dataset tags as authoritative dietary certifications.
-- Do not infer dietary preferences that the user did not state.
-- Qualitative preferences such as "high protein" do not have a fixed
-  numeric threshold unless the user explicitly provides one.
-- Use relative comparison among candidates rather than claiming that a
-  candidate objectively satisfies or fails an undefined qualitative
-  preference.
-- Do not invent ranking criteria that are not relevant to the user's request.
-- A maximum constraint is a limit, not a target. Do not prefer candidates
-  for being closer to the maximum allowed value.
-- Do not describe a constraint as "required" unless the user explicitly
-  stated it as a requirement.
-- When comparing protein_pdv, describe it as "protein Daily Value" or
-  "protein PDV", never "protein percentage".
-- Give each recommendation a concise reason explaining why it is a good
-  match for the user's request.
-
-Nutrition:
-- protein_pdv, total_fat_pdv, sugar_pdv, sodium_pdv,
-  saturated_fat_pdv, and carbs_pdv are percentages of Daily Value (PDV).
-- These fields are NOT grams and NOT the percentage of the recipe
-  consisting of that nutrient.
-- calories_kcal is measured in kcal.
-- When referring to a PDV field in a reason, use "Daily Value" or "PDV",
-  not "%" unless the context clearly states it is Daily Value percentage.
-
-Output:
-- Return the candidates in descending order of recommendation quality.
-- The score should be a relative ranking score where a higher score means
-  a better recommendation.
-- Return only recipes that were provided as candidates.
-"""
 class RankingAgent:
-    def __init__(self, model: str = "qwen2.5:3b"):
-        self.model = model
+    def _deterministic_score(
+        self,
+        request: MealRequest,
+        candidate: RetrievedRecipe,
+        min_retrieval: float,
+        max_retrieval: float,
+        min_rating: float,
+        max_rating: float,
+        min_protein: float,
+        max_protein: float,
+    ) -> float:
+        retrieval_range = max_retrieval - min_retrieval
+        rating_range = max_rating - min_rating
+        protein_range = max_protein - min_protein
+
+        retrieval_score = (
+            (candidate.score - min_retrieval) / retrieval_range
+            if retrieval_range > 0
+            else 1.0
+        )
+
+        rating_score = (
+            (candidate.recipe["rating"] - min_rating) / rating_range
+            if rating_range > 0
+            else 1.0
+        )
+
+        score = 0.7 * retrieval_score + 0.3 * rating_score
+
+        if "high protein" in request.dietary_preferences:
+            protein_score = (
+                (candidate.recipe["protein_pdv"] - min_protein) / protein_range
+                if protein_range > 0
+                else 1.0
+            )
+            score = 0.5 * retrieval_score + 0.2 * rating_score + 0.3 * protein_score
+
+        return score
+
+    def _reason(
+        self,
+        request: MealRequest,
+        candidate: RetrievedRecipe,
+    ) -> str:
+        recipe = candidate.recipe
+
+        if "high protein" in request.dietary_preferences:
+            return (
+                f"Strong match for the high-protein preference with "
+                f"{recipe['protein_pdv']} protein PDV and a rating of "
+                f"{recipe['rating']:.2f}."
+            )
+
+        return (
+            f"Strong match based on recipe relevance and a rating of "
+            f"{recipe['rating']:.2f}."
+        )
 
     async def rank(
         self,
         request: MealRequest,
         candidates: list[RetrievedRecipe],
     ) -> RankingResult:
-        candidate_data = [
-            {
-                "recipe_id": candidate.recipe_id,
-                "retrieval_score": candidate.score,
-                "recipe": candidate.recipe,
-            }
-            for candidate in candidates
+        if not candidates:
+            return RankingResult(recommendations=[])
+
+        retrieval_scores = [candidate.score for candidate in candidates]
+        ratings = [candidate.recipe["rating"] for candidate in candidates]
+        protein_values = [
+            candidate.recipe["protein_pdv"] for candidate in candidates
         ]
 
-        prompt = f"""
-User request:
-{request.model_dump_json(indent=2)}
+        min_retrieval = min(retrieval_scores)
+        max_retrieval = max(retrieval_scores)
+        min_rating = min(ratings)
+        max_rating = max(ratings)
+        min_protein = min(protein_values)
+        max_protein = max(protein_values)
 
-Candidate recipes:
-{json.dumps(candidate_data, ensure_ascii=False, indent=2)}
+        scored_candidates = []
 
-Rank these candidates for the user.
-"""
+        for candidate in candidates:
+            score = self._deterministic_score(
+                request=request,
+                candidate=candidate,
+                min_retrieval=min_retrieval,
+                max_retrieval=max_retrieval,
+                min_rating=min_rating,
+                max_rating=max_rating,
+                min_protein=min_protein,
+                max_protein=max_protein,
+            )
 
-        response = ollama.chat(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": prompt},
-            ],
-            format=RankingResult.model_json_schema(),
+            scored_candidates.append((candidate, score))
+
+        scored_candidates.sort(
+            key=lambda item: item[1],
+            reverse=True,
         )
 
-        result = RankingResult.model_validate_json(response.message.content)
+        recommendations = [
+            RankedRecipe(
+                recipe_id=candidate.recipe_id,
+                score=round(score, 4),
+                reason=self._reason(request, candidate),
+            )
+            for candidate, score in scored_candidates
+        ]
 
-        candidate_ids = {candidate.recipe_id for candidate in candidates}
+        return RankingResult(recommendations=recommendations)
 
-        for recommendation in result.recommendations:
-            if recommendation.recipe_id not in candidate_ids:
-                raise ValueError(
-                    f"Ranking agent returned unknown recipe ID: "
-                    f"{recommendation.recipe_id}"
-                )
-
-        return result
