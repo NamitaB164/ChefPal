@@ -35,6 +35,7 @@ class RecommendationMCPClient:
         recipe_ids: list[int],
         max_calories: float | None = None,
         max_minutes: int | None = None,
+        min_rating: float | None = None,
         required_tags: list[str] | None = None,
     ):
         return await self._call_tool(
@@ -43,6 +44,7 @@ class RecommendationMCPClient:
                 "recipe_ids": recipe_ids,
                 "max_calories": max_calories,
                 "max_minutes": max_minutes,
+                "min_rating": min_rating,
                 "required_tags": required_tags,
             },
         )

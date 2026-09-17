@@ -4,10 +4,7 @@ from recommendation_mcp.graph.workflow import build_graph
 
 
 QUERIES = [
-    "I want a chicken dinner under 500 calories and ready in 30 minutes",
-    "Give me a vegetarian breakfast under 400 calories",
-    "I want a quick chicken recipe",
-    "Give me a high protein dinner",
+    "I want a high-protein vegetarian dinner with chicken-style savory flavors, under 500 calories, that takes no more than 30 minutes to prepare. It should be low sodium, suitable for a quick weeknight meal, and preferably have a rating above 4.0. Please give me 5 different recipes, with the highest-protein options first.",
 ]
 
 

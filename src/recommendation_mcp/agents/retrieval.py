@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 
 from recommendation_mcp.agents.planner import MealRequest
 
-
+RETRIEVAL_LIMIT = 50
 class RetrievedRecipe(BaseModel):
     recipe_id: int
     score: float
@@ -19,7 +19,7 @@ class RetrievalAgent:
     async def retrieve(self, request: MealRequest) -> RetrievalResult:
         search_results = await self.mcp_client.hybrid_search(
             query=request.query,
-            limit=10,
+            limit=RETRIEVAL_LIMIT,
         )
 
         recipe_ids = [
@@ -31,6 +31,11 @@ class RetrievalAgent:
             recipe_ids=recipe_ids,
             max_calories=request.max_calories,
             max_minutes=request.max_minutes,
+            min_rating=request.min_rating,
+            required_tags=[
+            tag for tag in request.dietary_preferences
+                if tag == "vegetarian"
+            ],
         )
 
         candidates = []

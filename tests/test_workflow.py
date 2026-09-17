@@ -15,11 +15,12 @@ class FakeMCPClient:
         ]
 
     async def filter_recipe_ids(
-        self,
-        recipe_ids,
-        max_calories=None,
-        max_minutes=None,
-        required_tags=None,
+    self,
+    recipe_ids,
+    max_calories=None,
+    max_minutes=None,
+    min_rating=None,
+    required_tags=None,
     ):
         return recipe_ids
 

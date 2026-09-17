@@ -7,7 +7,7 @@ from recommendation_mcp.agents.retrieval import RetrievalAgent
 class FakeMCPClient:
     async def hybrid_search(self, query, limit):
         assert query == "chicken dinner"
-        assert limit == 10
+        assert limit == 50
 
         return [
             {"recipe_id": 101, "score": 0.9},
@@ -20,11 +20,13 @@ class FakeMCPClient:
         recipe_ids,
         max_calories=None,
         max_minutes=None,
+        min_rating=None,
         required_tags=None,
     ):
         assert recipe_ids == [101, 102, 103]
         assert max_calories == 500
         assert max_minutes == 30
+        assert min_rating is None
 
         return [101, 103]
 

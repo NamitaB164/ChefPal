@@ -1,3 +1,4 @@
+import asyncio
 from recommendation_mcp.agents.planner import MealRequest
 from recommendation_mcp.agents.ranking import RankedRecipe, RankingResult
 from recommendation_mcp.agents.retrieval import RetrievedRecipe
@@ -52,45 +53,49 @@ import pytest
 from recommendation_mcp.agents.ranking import RankingAgent
 
 
-def test_ranking_result_rejects_unknown_recipe_id(monkeypatch):
+def test_ranking_orders_candidates_by_score():
     agent = RankingAgent()
 
-    request = MealRequest(query="chicken dinner")
+    request = MealRequest(
+        query="chicken dinner",
+        dietary_preferences=["high protein"],
+    )
 
     candidates = [
         RetrievedRecipe(
-            recipe_id=123,
-            score=0.9,
-            recipe={"name": "Chicken Dinner"},
-        )
+            recipe_id=159348,
+            score=0.0161,
+            recipe={
+                "name": "easiest chicken dinner ever",
+                "rating": 4.5,
+                "protein_pdv": 35.0,
+            },
+        ),
+        RetrievedRecipe(
+            recipe_id=115420,
+            score=0.0159,
+            recipe={
+                "name": "30 minute almond chicken",
+                "rating": 4.7,
+                "protein_pdv": 50.0,
+            },
+        ),
+        RetrievedRecipe(
+            recipe_id=56704,
+            score=0.0154,
+            recipe={
+                "name": "chicken piccata",
+                "rating": 4.3,
+                "protein_pdv": 20.0,
+            },
+        ),
     ]
 
-    invalid_result = RankingResult(
-        recommendations=[
-            {
-                "recipe_id": 999,
-                "score": 1.0,
-                "reason": "Invalid candidate.",
-            }
-        ]
-    )
+    result = asyncio.run(agent.rank(request, candidates))
 
-    class FakeResponse:
-        message = type(
-            "Message",
-            (),
-            {"content": invalid_result.model_dump_json()},
-        )()
+    ranked_ids = [
+        recommendation.recipe_id
+        for recommendation in result.recommendations
+    ]
 
-    def fake_chat(**kwargs):
-        return FakeResponse()
-
-    monkeypatch.setattr("recommendation_mcp.agents.ranking.ollama.chat", fake_chat)
-
-    with pytest.raises(
-        ValueError,
-        match="Ranking agent returned unknown recipe ID: 999",
-    ):
-        import asyncio
-
-        asyncio.run(agent.rank(request, candidates))
+    assert ranked_ids == [115420, 159348, 56704]

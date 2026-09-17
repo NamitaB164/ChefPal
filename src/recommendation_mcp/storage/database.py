@@ -204,12 +204,37 @@ def _filter_by_tags(
         for recipe_id in recipe_ids
         if recipe_id in valid_ids
     ]
+def _filter_by_rating(
+    connection: sqlite3.Connection,
+    recipe_ids: list[int],
+    min_rating: float,
+) -> list[int]:
+    if not recipe_ids:
+        return []
+
+    placeholders = ",".join("?" for _ in recipe_ids)
+
+    query = f"""
+        SELECT recipe_id
+        FROM recipes
+        WHERE recipe_id IN ({placeholders})
+        AND rating >= ?
+    """
+
+    parameters = [*recipe_ids, min_rating]
+
+    rows = connection.execute(query, parameters).fetchall()
+
+    valid_ids = {row["recipe_id"] for row in rows}
+
+    return [recipe_id for recipe_id in recipe_ids if recipe_id in valid_ids]
 def filter_recipes(
     connection: sqlite3.Connection,
     recipe_ids: list[int],
     max_calories: float | None = None,
     max_minutes: int | None = None,
     required_tags: list[str] | None = None,
+    min_rating: float | None = None,
 ) -> list[int]:
     if not recipe_ids:
         return []
@@ -229,7 +254,8 @@ def filter_recipes(
             results,
             max_minutes,
         )
-
+    if min_rating is not None:
+        results = _filter_by_rating(connection, results, min_rating)
     if required_tags is not None:
         results = _filter_by_tags(
             connection,
