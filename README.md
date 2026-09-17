@@ -1,5 +1,3 @@
-# Recommendation MCP
-
 ## Overview
 
 This project is a local meal recommendation system. It takes a natural-language request, turns it into structured recipe filters, searches the recipe dataset, and returns ranked recipe suggestions.
