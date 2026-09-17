@@ -53,24 +53,42 @@ if st.button("Get recommendations"):
             for recommendation in ranking_result.recommendations:
                 recipe = recipes_by_id[recommendation.recipe_id]
 
-                st.subheader(recipe["name"])
+                st.markdown('<div class="recipe-card">', unsafe_allow_html=True)
 
                 col1, col2 = st.columns([1, 2])
 
                 with col1:
                     if recipe["image_path"]:
-                        st.image(recipe["image_path"], width=180)
+                        st.image(recipe["image_path"], width=220)
 
                 with col2:
-                    st.write(
-                        f"**{recipe['calories_kcal']:.1f} kcal** · "
-                        f"**{recipe['minutes']} min** · "
-                        f"\u2b50 **{recipe['rating']:.2f}**"
+                    st.markdown(
+                        f'<div class="recipe-title">{recipe["name"]}</div>',
+                        unsafe_allow_html=True,
                     )
 
-                    st.write(recipe["description"])
+                    st.markdown(
+                        f'<div class="recipe-stats">'
+                        f'<strong>{recipe["calories_kcal"]:.1f} kcal</strong> · '
+                        f'<strong>{recipe["minutes"]} min</strong> · '
+                        f'<strong>\u2b50 {recipe["rating"]:.2f}</strong>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                        )
 
-                    st.caption(recommendation.reason)
+                    st.markdown(
+                        f'<div class="recipe-description">'
+                        f'{recipe["description"]}'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+
+                    st.markdown(
+                        f'<div class="recipe-reason">'
+                        f'Why this recipe: {recommendation.reason}'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
 
                 with st.expander("View recipe"):
                     st.markdown("**Ingredients**")
@@ -83,4 +101,4 @@ if st.button("Get recommendations"):
                     for number, step in enumerate(recipe["steps"], start=1):
                         st.write(f"{number}. {step}")
 
-                st.divider()
+                st.markdown("</div>", unsafe_allow_html=True)
