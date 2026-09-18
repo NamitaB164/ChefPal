@@ -3,7 +3,16 @@ name = "recommendation-mcp"
 version = "0.1.0"
 description = "Local agentic RAG meal recommendation system using MCP"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "pydantic",
+    "sentence-transformers",
+    "qdrant-client",
+    "rank-bm25",
+    "mcp",
+    "langgraph",
+    "ollama",
+    "streamlit",
+]
 
 [dependency-groups]
 dev = [
@@ -20,6 +29,7 @@ target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
