@@ -1,23 +1,19 @@
-# Python
+*.egg-info/
 __pycache__/
-*.py[cod]
-*.pyo
+.pytest_cache/
+.ruff_cache/
+*.pyc
 
-# Virtual environment
 .mcp/
 
-# Environment files
 .env
 .env.*
 
-# IDE
 .vscode/
 
-# Local data and generated artifacts
 data/raw/
 data/processed/
 data/qdrant/
 
-# OS files
 .DS_Store
 Thumbs.db
